@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snake AI — Neural Evolution</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@200;300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f8f8f6;
+    --surface: #ffffff;
+    --border: #e8e8e4;
+    --text: #1a1a18;
+    --muted: #999990;
+    --accent: #1a1a18;
+    --food: #e84a2e;
+    --snake-head: #1a1a18;
+    --snake-body: #4a4a46;
+    --node-active: #1a1a18;
+    --node-inactive: #e8e8e4;
+    --pos-weight: #2a9d8f;
+    --neg-weight: #e84a2e;
+    --mono: 'DM Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 20px;
+    gap: 0;
+  }
+
+  header {
+    width: 100%;
+    max-width: 960px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+  }
+
+  .title-group h1 {
+    font-family: var(--sans);
+    font-weight: 200;
+    font-size: 28px;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+  .title-group h1 span { font-weight: 500; }
+  .title-group p {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+    letter-spacing: 0.5px;
+  }
+
+  .gen-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-align: right;
+    line-height: 1.8;
+  }
+  .gen-badge strong { color: var(--text); font-size: 22px; font-weight: 400; display: block; line-height: 1; }
+
+  .main-layout {
+    width: 100%;
+    max-width: 960px;
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .game-section { display: flex; flex-direction: column; gap: 16px; }
+
+  canvas#gameCanvas {
+    width: 100%;
+    aspect-ratio: 1;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    display: block;
+    border-radius: 4px;
+  }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .stat-cell {
+    background: var(--surface);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .stat-cell label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  .stat-cell .val {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .controls-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  btn, .btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    padding: 9px 18px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+  .btn:hover { background: var(--text); color: var(--surface); border-color: var(--text); }
+  .btn.primary { background: var(--text); color: var(--surface); border-color: var(--text); }
+  .btn.primary:hover { background: #444; border-color: #444; }
+
+  .speed-control {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 80px;
+    height: 2px;
+    background: var(--border);
+    border-radius: 1px;
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    background: var(--text);
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  /* Right panel */
+  .right-panel { display: flex; flex-direction: column; gap: 16px; }
+
+  .panel-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .panel-card header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel-card header span { color: var(--text); }
+
+  canvas#nnCanvas {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    background: var(--surface);
+  }
+
+  .chart-wrap { padding: 16px; }
+  canvas#chartCanvas { display: block; width: 100%; }
+
+  .log-wrap {
+    padding: 12px 16px;
+    max-height: 130px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 4px;
+  }
+  .log-line {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .log-line strong { color: var(--text); }
+
+  .sensor-wrap { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .sensor-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .sensor-row label { width: 110px; flex-shrink: 0; }
+  .sensor-bar-bg {
+    flex: 1;
+    height: 3px;
+    background: var(--border);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .sensor-bar { height: 100%; background: var(--text); border-radius: 1px; transition: width 0.1s; }
+  .sensor-val { width: 28px; text-align: right; }
+
+  footer {
+    margin-top: 40px;
+    width: 100%;
+    max-width: 960px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  footer p {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+  }
+
+  @media (max-width: 700px) {
+    .main-layout { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-group">
+    <h1>Snake <span>AI</span></h1>
+    <p>Neuroevolution · NEAT-inspired · Real-time</p>
+  </div>
+  <div class="gen-badge">
+    <strong id="genNum">1</strong>
+    generation
+  </div>
+</header>
+
+<div class="main-layout">
+  <!-- LEFT: Game -->
+  <div class="game-section">
+    <canvas id="gameCanvas" width="500" height="500"></canvas>
+
+    <div class="stats-row">
+      <div class="stat-cell">
+        <label>Score</label>
+        <div class="val" id="scoreVal">0</div>
+      </div>
+      <div class="stat-cell">
+        <label>Best</label>
+        <div class="val" id="bestVal">0</div>
+      </div>
+      <div class="stat-cell">
+        <label>Alive</label>
+        <div class="val" id="aliveVal">50</div>
+      </div>
+      <div class="stat-cell">
+        <label>Moves</label>
+        <div class="val" id="movesVal">0</div>
+      </div>
+    </div>
+
+    <div class="controls-row">
+      <button class="btn primary" id="btnStart">Start</button>
+      <button class="btn" id="btnPause">Pause</button>
+      <button class="btn" id="btnReset">Reset</button>
+      <div class="speed-control">
+        <span>Speed</span>
+        <input type="range" id="speedRange" min="1" max="60" value="12">
+        <span id="speedLabel">12</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Panel -->
+  <div class="right-panel">
+
+    <!-- Neural Network -->
+    <div class="panel-card">
+      <header>Neural Network <span id="nnLabel">8→12→4</span></header>
+      <canvas id="nnCanvas" width="248" height="200"></canvas>
+    </div>
+
+    <!-- Sensors -->
+    <div class="panel-card">
+      <header>Sensor Inputs</header>
+      <div class="sensor-wrap" id="sensorWrap"></div>
+    </div>
+
+    <!-- Score chart -->
+    <div class="panel-card">
+      <header>Score History <span id="chartLabel">per generation</span></header>
+      <div class="chart-wrap">
+        <canvas id="chartCanvas" width="248" height="90"></canvas>
+      </div>
+    </div>
+
+    <!-- Log -->
+    <div class="panel-card">
+      <header>Event Log</header>
+      <div class="log-wrap" id="logWrap"></div>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  <p>Snake AI · Neuroevolution · Kavyasree-351</p>
+  <p>Built with vanilla JS · No libraries</p>
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════════════════
+const GRID = 20;
+const CELL = 500 / GRID;
+const POP_SIZE = 50;
+const HIDDEN = 12;
+const INPUTS = 8;   // 4 danger dirs + 4 food dirs
+const OUTPUTS = 4;  // U D L R
+const MUTATION_RATE = 0.15;
+const MUTATION_STRENGTH = 0.3;
+const MAX_MOVES_FACTOR = 150; // moves without eating before death
+
+// ═══════════════════════════════════════════════════════
+//  NEURAL NETWORK
+// ═══════════════════════════════════════════════════════
+class NeuralNet {
+  constructor(w1, b1, w2, b2) {
+    this.w1 = w1 || this.randMatrix(INPUTS, HIDDEN);
+    this.b1 = b1 || this.randArr(HIDDEN);
+    this.w2 = w2 || this.randMatrix(HIDDEN, OUTPUTS);
+    this.b2 = b2 || this.randArr(OUTPUTS);
+  }
+  randMatrix(r, c) {
+    return Array.from({length:r}, () => Array.from({length:c}, () => (Math.random()*2-1)));
+  }
+  randArr(n) { return Array.from({length:n}, () => (Math.random()*2-1)); }
+  relu(x) { return x > 0 ? x : 0; }
+  softmax(arr) {
+    const m = Math.max(...arr);
+    const e = arr.map(x => Math.exp(x - m));
+    const s = e.reduce((a,b)=>a+b,0);
+    return e.map(x=>x/s);
+  }
+  forward(inputs) {
+    // Hidden layer
+    this.h = this.b1.map((b, j) =>
+      this.relu(inputs.reduce((s, x, i) => s + x * this.w1[i][j], b))
+    );
+    // Output
+    const raw = this.b2.map((b, j) =>
+      this.h.reduce((s, x, i) => s + x * this.w2[i][j], b)
+    );
+    this.out = raw;
+    return raw.indexOf(Math.max(...raw));
+  }
+  mutate() {
+    const mutateArr = arr => arr.map(x =>
+      Math.random() < MUTATION_RATE ? x + (Math.random()*2-1) * MUTATION_STRENGTH : x
+    );
+    return new NeuralNet(
+      this.w1.map(row => mutateArr(row)),
+      mutateArr(this.b1),
+      this.w2.map(row => mutateArr(row)),
+      mutateArr(this.b2)
+    );
+  }
+  crossover(other) {
+    const mix = (a, b) => a.map((v, i) => Math.random() < 0.5 ? v : b[i]);
+    const mixM = (a, b) => a.map((row, i) => mix(row, b[i]));
+    return new NeuralNet(mixM(this.w1, other.w1), mix(this.b1, other.b1),
+                         mixM(this.w2, other.w2), mix(this.b2, other.b2));
+  }
+  clone() {
+    return new NeuralNet(
+      this.w1.map(r=>[...r]), [...this.b1],
+      this.w2.map(r=>[...r]), [...this.b2]
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  SNAKE AGENT
+// ═══════════════════════════════════════════════════════
+const DIRS = [{x:0,y:-1},{x:0,y:1},{x:-1,y:0},{x:1,y:0}]; // U D L R
+class Snake {
+  constructor(brain) {
+    this.brain = brain || new NeuralNet();
+    this.reset();
+  }
+  reset() {
+    const cx = Math.floor(GRID/2), cy = Math.floor(GRID/2);
+    this.body = [{x:cx,y:cy},{x:cx-1,y:cy},{x:cx-2,y:cy}];
+    this.dir = 3; // right
+    this.alive = true;
+    this.score = 0;
+    this.fitness = 0;
+    this.moves = 0;
+    this.movesLeft = MAX_MOVES_FACTOR * this.body.length;
+    this.food = this.spawnFood();
+    this.sensors = new Array(INPUTS).fill(0);
+  }
+  spawnFood() {
+    let f;
+    do { f = {x: Math.floor(Math.random()*GRID), y: Math.floor(Math.random()*GRID)}; }
+    while (this.body.some(b => b.x===f.x && b.y===f.y));
+    return f;
+  }
+  head() { return this.body[0]; }
+  getSensors() {
+    const h = this.head();
+    const dx = this.food.x - h.x, dy = this.food.y - h.y;
+    const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+    // 4 danger rays (normalized distance to wall or body)
+    const danger = DIRS.map(d => {
+      let nx=h.x+d.x, ny=h.y+d.y, steps=0;
+      while (nx>=0&&nx<GRID&&ny>=0&&ny<GRID) {
+        steps++;
+        if (this.body.some(b=>b.x===nx&&b.y===ny)) return 1-steps/GRID;
+        nx+=d.x; ny+=d.y;
+      }
+      return 1-steps/GRID;
+    });
+    // 4 food direction signals
+    const fd = [
+      dy < 0 ? 1 : 0,  // food up
+      dy > 0 ? 1 : 0,  // food down
+      dx < 0 ? 1 : 0,  // food left
+      dx > 0 ? 1 : 0,  // food right
+    ];
+    this.sensors = [...danger, ...fd];
+    return this.sensors;
+  }
+  step() {
+    if (!this.alive) return;
+    const inputs = this.getSensors();
+    const action = this.brain.forward(inputs);
+    // Prevent 180 reverse
+    const opp = [1,0,3,2];
+    if (action !== opp[this.dir]) this.dir = action;
+
+    const d = DIRS[this.dir];
+    const nh = {x: this.head().x + d.x, y: this.head().y + d.y};
+
+    // Wall collision
+    if (nh.x<0||nh.x>=GRID||nh.y<0||nh.y>=GRID) { this.die(); return; }
+    // Self collision
+    if (this.body.some(b=>b.x===nh.x&&b.y===nh.y)) { this.die(); return; }
+
+    this.body.unshift(nh);
+    if (nh.x===this.food.x && nh.y===this.food.y) {
+      this.score++;
+      this.movesLeft = MAX_MOVES_FACTOR * this.body.length;
+      this.food = this.spawnFood();
+    } else {
+      this.body.pop();
+    }
+    this.moves++;
+    this.movesLeft--;
+    if (this.movesLeft <= 0) this.die();
+  }
+  die() {
+    this.alive = false;
+    this.fitness = this.body.length * this.body.length * 500
+                 + (this.score > 0 ? Math.pow(2, this.score) * 500 : 0)
+                 + this.moves;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  EVOLUTION
+// ═══════════════════════════════════════════════════════
+class Evolution {
+  constructor() {
+    this.generation = 1;
+    this.population = Array.from({length:POP_SIZE}, () => new Snake());
+    this.bestScore = 0;
+    this.bestEver = 0;
+    this.history = [];
+    this.bestBrain = null;
+  }
+  step() {
+    this.population.forEach(s => s.step());
+    return this.population.filter(s=>s.alive).length;
+  }
+  isAllDead() { return this.population.every(s=>!s.alive); }
+  evolve() {
+    // Sort by fitness
+    this.population.sort((a,b)=>b.fitness-a.fitness);
+    const best = this.population[0];
+    this.bestScore = best.score;
+    this.bestEver = Math.max(this.bestEver, best.score);
+    this.bestBrain = best.brain.clone();
+    this.history.push(best.score);
+
+    // Selection + reproduction
+    const eliteN = 5;
+    const elites = this.population.slice(0, eliteN).map(s => s.brain.clone());
+    const newPop = elites.map(b => new Snake(b)); // keep elites
+
+    // Fill rest with crossover + mutation
+    const topN = Math.min(15, this.population.length);
+    while (newPop.length < POP_SIZE) {
+      const p1 = this.population[Math.floor(Math.random()*topN)].brain;
+      const p2 = this.population[Math.floor(Math.random()*topN)].brain;
+      const child = p1.crossover(p2).mutate();
+      newPop.push(new Snake(child));
+    }
+
+    this.generation++;
+    this.population = newPop;
+  }
+  get best() { return this.population[0]; }
+  get leader() {
+    return this.population.reduce((b,s) => s.score > b.score ? s : b, this.population[0]);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════════
+const gc  = document.getElementById('gameCanvas');
+const gx  = gc.getContext('2d');
+const nnc = document.getElementById('nnCanvas');
+const nx  = nnc.getContext('2d');
+const cc  = document.getElementById('chartCanvas');
+const cx2 = cc.getContext('2d');
+
+function drawGame(snake) {
+  const W = gc.width, H = gc.height;
+  gx.clearRect(0,0,W,H);
+
+  // Grid dots
+  gx.fillStyle = '#f0f0ee';
+  for (let x=0;x<GRID;x++) for (let y=0;y<GRID;y++) {
+    gx.beginPath();
+    gx.arc(x*CELL+CELL/2, y*CELL+CELL/2, 1, 0, Math.PI*2);
+    gx.fill();
+  }
+
+  // Food
+  const fx = snake.food.x*CELL, fy = snake.food.y*CELL;
+  gx.fillStyle = '#e84a2e';
+  gx.beginPath();
+  gx.arc(fx+CELL/2, fy+CELL/2, CELL*0.35, 0, Math.PI*2);
+  gx.fill();
+
+  // Snake body
+  snake.body.forEach((seg, i) => {
+    const x = seg.x*CELL, y = seg.y*CELL;
+    const pad = i===0 ? 1 : 3;
+    const r = i===0 ? 4 : 3;
+    gx.fillStyle = i===0 ? '#1a1a18' : `rgba(74,74,70,${Math.max(0.2, 1-i*0.03)})`;
+    roundRect(gx, x+pad, y+pad, CELL-pad*2, CELL-pad*2, r);
+    gx.fill();
+  });
+
+  // Direction indicator on head
+  const h = snake.body[0];
+  const d = DIRS[snake.dir];
+  gx.fillStyle = '#f8f8f6';
+  gx.beginPath();
+  gx.arc(h.x*CELL+CELL/2+d.x*3, h.y*CELL+CELL/2+d.y*3, 2.5, 0, Math.PI*2);
+  gx.fill();
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r);
+  ctx.closePath();
+}
+
+function drawNN(brain, inputs) {
+  const W = nnc.width, H = nnc.height;
+  nx.clearRect(0,0,W,H);
+
+  const layers = [INPUTS, HIDDEN, OUTPUTS];
+  const xs = [30, W/2, W-30];
+  const labels = ['U','D','L','R','↑','↓','←','→'];
+  const outLabels = ['↑','↓','←','→'];
+
+  // Draw weights w1
+  for (let i=0;i<INPUTS;i++) {
+    const iy = nodeY(i, INPUTS, H);
+    for (let j=0;j<HIDDEN;j++) {
+      const hy = nodeY(j, HIDDEN, H);
+      const w = brain.w1[i][j];
+      nx.strokeStyle = w>0 ? `rgba(42,157,143,${Math.min(Math.abs(w)*0.4,0.35)})` : `rgba(232,74,46,${Math.min(Math.abs(w)*0.4,0.35)})`;
+      nx.lineWidth = Math.min(Math.abs(w)*1.2, 2);
+      nx.beginPath(); nx.moveTo(xs[0], iy); nx.lineTo(xs[1], hy); nx.stroke();
+    }
+  }
+  // Draw weights w2
+  for (let i=0;i<HIDDEN;i++) {
+    const hy = nodeY(i, HIDDEN, H);
+    for (let j=0;j<OUTPUTS;j++) {
+      const oy = nodeY(j, OUTPUTS, H);
+      const w = brain.w2[i][j];
+      nx.strokeStyle = w>0 ? `rgba(42,157,143,${Math.min(Math.abs(w)*0.4,0.35)})` : `rgba(232,74,46,${Math.min(Math.abs(w)*0.4,0.35)})`;
+      nx.lineWidth = Math.min(Math.abs(w)*1.2, 2);
+      nx.beginPath(); nx.moveTo(xs[1], hy); nx.lineTo(xs[2], oy); nx.stroke();
+    }
+  }
+
+  // Nodes — input
+  inputs.forEach((v, i) => {
+    const y = nodeY(i, INPUTS, H);
+    const brightness = Math.floor(v * 200);
+    nx.fillStyle = v > 0.1 ? `rgb(${26-brightness*0.1},${26-brightness*0.1},${24-brightness*0.1})` : '#e8e8e4';
+    nx.beginPath(); nx.arc(xs[0], y, 6, 0, Math.PI*2); nx.fill();
+    nx.fillStyle = '#999';
+    nx.font = '8px DM Mono'; nx.textAlign = 'right';
+    nx.fillText(labels[i], xs[0]-10, y+3);
+  });
+
+  // Nodes — hidden
+  brain.h && brain.h.forEach((v, i) => {
+    const y = nodeY(i, HIDDEN, H);
+    const a = Math.min(Math.abs(v) * 0.5, 1);
+    nx.fillStyle = v > 0 ? `rgba(26,26,24,${Math.max(a,0.15)})` : '#e8e8e4';
+    nx.beginPath(); nx.arc(xs[1], y, 4, 0, Math.PI*2); nx.fill();
+  });
+
+  // Nodes — output
+  const action = brain.out ? brain.out.indexOf(Math.max(...brain.out)) : -1;
+  outLabels.forEach((lbl, i) => {
+    const y = nodeY(i, OUTPUTS, H);
+    nx.fillStyle = i===action ? '#1a1a18' : '#e8e8e4';
+    nx.strokeStyle = '#ccc';
+    nx.lineWidth = 1;
+    nx.beginPath(); nx.arc(xs[2], y, 7, 0, Math.PI*2);
+    nx.fill(); if (i!==action) nx.stroke();
+    nx.fillStyle = i===action ? '#f8f8f6' : '#999';
+    nx.font = '9px DM Mono'; nx.textAlign = 'left';
+    nx.fillText(lbl, xs[2]+12, y+3);
+  });
+}
+
+function nodeY(i, total, H) {
+  const pad = 18;
+  return pad + i * (H - pad*2) / (total - 1 || 1);
+}
+
+function drawChart(history) {
+  const W = cc.width, H = cc.height;
+  cx2.clearRect(0,0,W,H);
+  if (history.length < 2) return;
+
+  const max = Math.max(...history, 1);
+  const pts = history.map((v,i) => ({
+    x: i/(history.length-1) * W,
+    y: H - (v/max) * (H-8) - 4
+  }));
+
+  // Fill
+  cx2.beginPath();
+  cx2.moveTo(pts[0].x, H);
+  pts.forEach(p => cx2.lineTo(p.x, p.y));
+  cx2.lineTo(pts[pts.length-1].x, H);
+  cx2.closePath();
+  cx2.fillStyle = 'rgba(26,26,24,0.06)';
+  cx2.fill();
+
+  // Line
+  cx2.beginPath();
+  cx2.moveTo(pts[0].x, pts[0].y);
+  pts.forEach(p => cx2.lineTo(p.x, p.y));
+  cx2.strokeStyle = '#1a1a18';
+  cx2.lineWidth = 1.5;
+  cx2.stroke();
+
+  // Latest dot
+  const last = pts[pts.length-1];
+  cx2.beginPath();
+  cx2.arc(last.x, last.y, 3, 0, Math.PI*2);
+  cx2.fillStyle = '#e84a2e';
+  cx2.fill();
+}
+
+function updateSensors(sensors) {
+  const wrap = document.getElementById('sensorWrap');
+  const names = ['Danger ↑','Danger ↓','Danger ←','Danger →','Food ↑','Food ↓','Food ←','Food →'];
+  if (!wrap.children.length) {
+    names.forEach((n,i) => {
+      wrap.innerHTML += `<div class="sensor-row">
+        <label>${n}</label>
+        <div class="sensor-bar-bg"><div class="sensor-bar" id="sb${i}" style="width:0%"></div></div>
+        <span class="sensor-val" id="sv${i}">0.0</span>
+      </div>`;
+    });
+  }
+  sensors.forEach((v,i) => {
+    const bar = document.getElementById(`sb${i}`);
+    const val = document.getElementById(`sv${i}`);
+    if (bar) bar.style.width = (v*100)+'%';
+    if (val) val.textContent = v.toFixed(1);
+  });
+}
+
+function log(msg) {
+  const wrap = document.getElementById('logWrap');
+  const el = document.createElement('div');
+  el.className = 'log-line';
+  el.innerHTML = msg;
+  wrap.prepend(el);
+  while (wrap.children.length > 20) wrap.removeChild(wrap.lastChild);
+}
+
+// ═══════════════════════════════════════════════════════
+//  GAME LOOP
+// ═══════════════════════════════════════════════════════
+const evo = new Evolution();
+let running = false, paused = false, animId = null;
+let speed = 12, lastTime = 0, stepAccum = 0;
+
+function gameLoop(ts) {
+  animId = requestAnimationFrame(gameLoop);
+  if (paused) return;
+
+  const dt = ts - lastTime;
+  lastTime = ts;
+  stepAccum += dt;
+
+  const msPerStep = 1000 / speed;
+  while (stepAccum >= msPerStep) {
+    stepAccum -= msPerStep;
+    tick();
+  }
+}
+
+function tick() {
+  const alive = evo.step();
+
+  // Find leader (highest score alive, else first)
+  const aliveSnakes = evo.population.filter(s=>s.alive);
+  const leader = aliveSnakes.length
+    ? aliveSnakes.reduce((b,s)=>s.score>b.score?s:b, aliveSnakes[0])
+    : evo.population[0];
+
+  // Update UI
+  document.getElementById('scoreVal').textContent = leader.score;
+  document.getElementById('aliveVal').textContent = alive;
+  document.getElementById('movesVal').textContent = leader.moves;
+  document.getElementById('bestVal').textContent = evo.bestEver;
+  document.getElementById('genNum').textContent = evo.generation;
+
+  drawGame(leader);
+  drawNN(leader.brain, leader.sensors);
+  updateSensors(leader.sensors);
+
+  if (evo.isAllDead()) {
+    const bestScore = evo.population.sort((a,b)=>b.score-a.score)[0].score;
+    log(`Gen <strong>${evo.generation}</strong> ended · Best score <strong>${bestScore}</strong>`);
+    drawChart(evo.history);
+    evo.evolve();
+    document.getElementById('genNum').textContent = evo.generation;
+  }
+}
+
+// Controls
+document.getElementById('btnStart').onclick = () => {
+  if (!running) {
+    running = true; paused = false;
+    lastTime = performance.now(); stepAccum = 0;
+    log('Evolution <strong>started</strong>');
+    requestAnimationFrame(gameLoop);
+    document.getElementById('btnStart').textContent = 'Running';
+    document.getElementById('btnStart').classList.add('primary');
+  }
+};
+
+document.getElementById('btnPause').onclick = () => {
+  paused = !paused;
+  document.getElementById('btnPause').textContent = paused ? 'Resume' : 'Pause';
+  log(paused ? 'Paused' : 'Resumed');
+};
+
+document.getElementById('btnReset').onclick = () => {
+  cancelAnimationFrame(animId);
+  running = false; paused = false;
+  Object.assign(evo, new Evolution());
+  document.getElementById('btnStart').textContent = 'Start';
+  document.getElementById('genNum').textContent = '1';
+  document.getElementById('scoreVal').textContent = '0';
+  document.getElementById('bestVal').textContent = '0';
+  document.getElementById('aliveVal').textContent = POP_SIZE;
+  document.getElementById('movesVal').textContent = '0';
+  document.getElementById('logWrap').innerHTML = '';
+  gx.clearRect(0,0,gc.width,gc.height);
+  log('Reset · New population of <strong>50</strong>');
+};
+
+document.getElementById('speedRange').oninput = function() {
+  speed = +this.value;
+  document.getElementById('speedLabel').textContent = speed;
+};
+
+// Initial draw
+drawGame(evo.population[0]);
+drawNN(evo.population[0].brain, new Array(INPUTS).fill(0));
+log('Ready · Press <strong>Start</strong> to begin evolution');
+log(`Population <strong>${POP_SIZE}</strong> · Architecture <strong>${INPUTS}→${HIDDEN}→${OUTPUTS}</strong>`);
+</script>
+</body>
+</html>
