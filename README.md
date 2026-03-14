@@ -1,7 +1,7 @@
 # Snake AI — Neuroevolution
 
 > NEAT-inspired neuroevolution agent that learns to play Snake 
-> in real-time — built with vanilla JS, zero libraries.
+> in real-time - built with vanilla JS, zero libraries.
 
 🎮 **[Play it live here](https://kavyasree-351.github.io/Snake-AI/)**
 
@@ -16,7 +16,7 @@ rules, no training data. Pure evolution.
 
 ## How it works
 
-**Each snake has a brain — a neural network with:**
+**Each snake has a brain, a neural network with:**
 - 8 inputs (danger sensors + food sensors in 4 directions)
 - 12 hidden neurons
 - 4 outputs (up, down, left, right)
@@ -46,4 +46,4 @@ Danger ↑↓←→ + Food ↑↓←→ → Move decision
 - Fully runs in the browser
 
 ---
-*by Kavyasree · BITS Pilani Dubai*
+*by Kavyasree*
