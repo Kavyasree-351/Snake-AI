@@ -1,17 +1,49 @@
-
-# neuroevolution neat snake-game neural-network javascript ai machine-learning
-
 # Snake AI — Neuroevolution
 
-A NEAT-inspired neuroevolution agent that learns to play Snake in real-time, built with vanilla JavaScript and zero external libraries.
+> NEAT-inspired neuroevolution agent that learns to play Snake 
+> in real-time — built with vanilla JS, zero libraries.
+
+🎮 **[Play it live here](https://kavyasree-351.github.io/Snake-AI/)**
+
+---
+
+## What is this?
+
+A population of 50 snake agents starts with completely random 
+neural networks. Through natural selection and mutation across 
+generations, they gradually learn to play Snake — no hardcoded 
+rules, no training data. Pure evolution.
 
 ## How it works
-50 snake agents start with random neural networks. Each generation, the best performers reproduce with slight mutations. Over time the population evolves to play better — no hardcoded rules, pure evolution.
+
+**Each snake has a brain — a neural network with:**
+- 8 inputs (danger sensors + food sensors in 4 directions)
+- 12 hidden neurons
+- 4 outputs (up, down, left, right)
+
+**Each generation:**
+1. All 50 snakes play simultaneously
+2. Snakes that survive longer and eat more score higher
+3. Best performers reproduce with slight random mutations
+4. Next generation is slightly smarter than the last
+
+## Features
+- Real-time neural network visualisation
+- Live sensor input display
+- Score history per generation
+- Adjustable simulation speed
+- Population of 50 agents evolving simultaneously
 
 ## Architecture
-- Input: 8 sensors (danger + food in 4 directions)
-- Hidden: 12 neurons
-- Output: 4 directions
+```
+Input (8) → Hidden (12) → Output (4)
+Danger ↑↓←→ + Food ↑↓←→ → Move decision
+```
 
-## Live Demo
-[Play it here](https://kavyasree-351.github.io/Snake-AI)
+## Built with
+- Vanilla JavaScript — zero external libraries
+- HTML5 Canvas for rendering
+- Fully runs in the browser
+
+---
+*by Kavyasree · BITS Pilani Dubai*
